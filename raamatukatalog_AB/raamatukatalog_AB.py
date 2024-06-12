@@ -1,28 +1,31 @@
-﻿from tkinter import * 
+﻿from tkinter import *
 import tkinter as tk
 from sqlite3 import *
 from sqlite3 import Error
 from tkinter import ttk, messagebox
 from os import path
 
+# Function to establish connection to SQLite database
 def create_connect(db_path):
     connection = None
     try:
         connection = connect(db_path)
-        print("Ühendus on olemas!")
+        print("Ühendus on olemas!")  # Connection is established!
     except Error as e:
-                print(f"Tekkis viga: {e}")
+        print(f"Tekkis viga: {e}")  # Error occurred
     return connection
 
-def execute_query(connection, query):
+# Function to execute queries that modify data (CREATE, INSERT, UPDATE, DELETE)
+def execute_query(connection, query, params=()):
     try:
         cursor = connection.cursor()
-        cursor.execute(query)
+        cursor.execute(query, params)
         connection.commit()
-        print("Tabel on loodud või andmed on sisestatud")
+        print("Tabel on loodud või andmed on sisestatud")  # Table created or data inserted
     except Error as e:
-        print(f"Tekkis viga: {e}")
+        print(f"Tekkis viga: {e}")  # Error occurred
 
+# Function to execute queries that read data (SELECT)
 def execute_read_query(connection, query):
     cursor = connection.cursor()
     result = None
@@ -31,16 +34,16 @@ def execute_read_query(connection, query):
         result = cursor.fetchall()
         return result
     except Error as e:
-        print(f"Tekkis viga: {e}")
+        print(f"Tekkis viga: {e}")  # Error occurred
 
-
+# SQL queries to create tables if they don't exist
 create_autorid_table = """
 CREATE TABLE IF NOT EXISTS Autorid(
 autor_id INTEGER PRIMARY KEY AUTOINCREMENT,
-autor_nimi TEXT NOT NULL
+autor_nimi TEXT NOT NULL,
+sünnikuupäev DATE
 )
 """
-
 
 create_zanrid_table = """
 CREATE TABLE IF NOT EXISTS Zanrid(
@@ -49,11 +52,11 @@ zanri_nimi TEXT NOT NULL
 )
 """
 
-
 create_raamatud_table = """
 CREATE TABLE IF NOT EXISTS Raamatud(
 raamat_id INTEGER PRIMARY KEY AUTOINCREMENT,
 pealkiri TEXT NOT NULL,
+väljaandmise_kuupäev DATE,
 autor_id INTEGER,
 zanr_id INTEGER,
 FOREIGN KEY (autor_id) REFERENCES Autorid (autor_id),
@@ -61,16 +64,15 @@ FOREIGN KEY (zanr_id) REFERENCES Zanrid (zanr_id)
 )
 """
 
-
+# SQL queries to insert initial data into tables
 insert_autorid = """
 INSERT INTO Autorid (autor_nimi, sünnikuupäev)
 VALUES 
-("Fyodor Dostoevsky"),
-("William Shakespeare"),
-("Stephen King"),
-("Arthur Conan Doyle")
+("Fyodor Dostoevsky", NULL),
+("William Shakespeare", NULL),
+("Stephen King", NULL),
+("Arthur Conan Doyle", NULL)
 """
-
 
 insert_zanrid = """
 INSERT INTO Zanrid (zanri_nimi)
@@ -82,44 +84,43 @@ VALUES
 ("Horror novels")
 """
 
-
 insert_raamatud = """
 INSERT INTO Raamatud (pealkiri, väljaandmise_kuupäev, autor_id, zanr_id)
 VALUES 
-(),
-("Crime and punishment", 1, 3),
-("Brothers karamazov, 1, 3),
-("Kapten Bloodi odüsseia", "2023-07-23", 4, 5),
-("Meister ja Margarita", "2024-02-12", 5, 2)
+("Crime and Punishment", '1866-01-01', 1, 3),
+("Brothers Karamazov", '1880-01-01', 1, 3),
+("Captain Blood's Odyssey", '1922-01-01', 4, 5),
+("The Master and Margarita", '1967-01-01', 2, 2)
 """
 
-
+# Function to create tables in the database
 def create_tables(conn):
     execute_query(conn, create_autorid_table)
     execute_query(conn, create_zanrid_table)
     execute_query(conn, create_raamatud_table)
-    messagebox.showinfo("Tabelid on loodud!","Tabelid on loodud!")
+    messagebox.showinfo("Tabelid on loodud!","Tabelid on loodud!")  # Tables have been created!
 
-
+# Function to insert initial data into tables
 def insert_tables(conn):
     execute_query(conn, insert_autorid)
     execute_query(conn, insert_zanrid)
     execute_query(conn, insert_raamatud)
-    messagebox.showinfo("Tabelid on täidetud!","Tabelid on täidetud!")
+    messagebox.showinfo("Tabelid on täidetud!","Tabelid on täidetud!")  # Tables have been filled with data!
 
-
+# Get the absolute path of the current script and construct the database path
 filename = path.abspath(__file__)
-dbdir=filename.rstrip('Andmebaasi_haldamine_raamatukataloogis2.py')
-dbpath = path.join(dbdir, "data.db")
+dbpath = path.join(path.dirname(filename), "data.db")
+
+# Create connection to SQLite database
 conn = create_connect(dbpath)
 
-
-aken =tk.Tk()
+# Tkinter GUI code
+aken = tk.Tk()
 aken.geometry("1000x1000")
 aken.title("Raamatukataloog")
 aken.configure(bg="#cfbaf0")
 
-
+# Function to display authors in a separate window
 def table_autorid(conn):
     aken_autorid = tk.Toplevel(aken)
     aken_autorid.title("Autorite tabel")
@@ -139,7 +140,7 @@ def table_autorid(conn):
     tree.pack()
     aken_autorid.mainloop()
 
-
+# Function to display genres in a separate window
 def table_zanr(conn):
     aken_zanr = tk.Toplevel(aken)
     aken_zanr.title("Zanrite tabel")
@@ -157,7 +158,7 @@ def table_zanr(conn):
     tree.pack()
     aken_zanr.mainloop()
 
-
+# Function to display books in a separate window
 def table_raamatud(conn):
     aken_raamatud = tk.Toplevel(aken)
     aken_raamatud.title("Raamatute tabel")
@@ -186,7 +187,7 @@ def table_raamatud(conn):
     tree.pack()
     aken_raamatud.mainloop()
 
-
+# Function to add a book to the database
 def add_raamat(conn, pealkiri, väljaandmise_kuupäev, autor_id, zanr_id):
     try:
         cursor = conn.cursor()
@@ -197,257 +198,59 @@ def add_raamat(conn, pealkiri, väljaandmise_kuupäev, autor_id, zanr_id):
     except Error as e:
         messagebox.showerror("Viga", f"Viga tabeli sordimisel: {e}")
 
-
+# Function to open a window to add a book
 def add_raamat_aken():
     raamat_andmed_frame = tk.Toplevel(aken)
     raamat_andmed_frame.title("Lisa raamat")
     tk.Label(raamat_andmed_frame, text="Pealkiri:").grid(row=1, column=0)
     pealkiri_entry = tk.Entry(raamat_andmed_frame)
     pealkiri_entry.grid(row=1, column=1)
-    tk.Label(raamat_andmed_frame, text="Väljaandmise kuupäev:").grid(row=2, column=0)
+    tk.Label(raamat_andmed_frame, text="Väljaandmise kuupäev (YYYY-MM-DD):").grid(row=2, column=0)
     väljaandmise_kuupäev_entry = tk.Entry(raamat_andmed_frame)
     väljaandmise_kuupäev_entry.grid(row=2, column=1)
-    tk.Label(raamat_andmed_frame, text="Autor:").grid(row=3, column=0)
-    autor_andmed = execute_read_query(conn, "SELECT autor_id, autor_nimi FROM Autorid")
-    autor_ids = [row[0] for row in autor_andmed]
-    autor_names = [row[1] for row in autor_andmed]
-    valitud_autor_id = tk.StringVar()
-    autor_id_combobox = ttk.Combobox(raamat_andmed_frame, textvariable=valitud_autor_id)
-    autor_id_combobox['values'] = autor_names
-    autor_id_combobox.grid(row=3, column=1)
-    tk.Label(raamat_andmed_frame, text="Zanr:").grid(row=4, column=0)
-    zanr_andmed = execute_read_query(conn, "SELECT zanr_id, zanri_nimi FROM Zanrid")
-    zanr_ids = [row[0] for row in zanr_andmed]
-    zanr_names = [row[1] for row in zanr_andmed]
-    valitud_zanr_id = tk.StringVar()
-    zanr_id_combobox = ttk.Combobox(raamat_andmed_frame, textvariable=valitud_zanr_id)
-    zanr_id_combobox['values'] = zanr_names
-    zanr_id_combobox.grid(row=4, column=1)
+    
+    # Fetching author names from database to populate dropdown
+    autorid_query = "SELECT autor_id, autor_nimi FROM Autorid"
+    autorid_results = execute_read_query(conn, autorid_query)
+    autorid_options = {autor[1]: autor[0] for autor in autorid_results}
 
-    def add_raamat_close():
+    tk.Label(raamat_andmed_frame, text="Autor:").grid(row=3, column=0)
+    autor_var = tk.StringVar()
+    autor_dropdown = tk.OptionMenu(raamat_andmed_frame, autor_var, *autorid_options.keys())
+    autor_dropdown.grid(row=3, column=1)
+
+    # Fetching genre names from database to populate dropdown
+    zanrid_query = "SELECT zanr_id, zanri_nimi FROM Zanrid"
+    zanrid_results = execute_read_query(conn, zanrid_query)
+    zanrid_options = {zanr[1]: zanr[0] for zanr in zanrid_results}
+
+    tk.Label(raamat_andmed_frame, text="Žanr:").grid(row=4, column=0)
+    zanr_var = tk.StringVar()
+    zanr_dropdown = tk.OptionMenu(raamat_andmed_frame, zanr_var, *zanrid_options.keys())
+    zanr_dropdown.grid(row=4, column=1)
+
+    def save_raamat():
         pealkiri = pealkiri_entry.get()
         väljaandmise_kuupäev = väljaandmise_kuupäev_entry.get()
-        autor_id = autor_ids[autor_names.index(valitud_autor_id.get())]
-        zanr_id = zanr_ids[zanr_names.index(valitud_zanr_id.get())]
+        autor_id = autorid_options[autor_var.get()]
+        zanr_id = zanrid_options[zanr_var.get()]
         add_raamat(conn, pealkiri, väljaandmise_kuupäev, autor_id, zanr_id)
         raamat_andmed_frame.destroy()
-    tk.Button(raamat_andmed_frame, text="Lisa raamat", command=add_raamat_close).grid(row=5, columnspan=2)
 
+    tk.Button(raamat_andmed_frame, text="Salvesta raamat", command=save_raamat).grid(row=5, columnspan=2)
 
-def add_zanr(conn, zanri_nimi):
-    try:
-        cursor = conn.cursor()
-        cursor.execute("INSERT INTO Zanrid (zanri_nimi) VALUES (?)", (zanri_nimi,))
-        conn.commit()
-        messagebox.showinfo("Zanr on lisatud","Zanr on lisatud")
-    except Error as e:
-        messagebox.showerror("Viga", f"Viga {e}") 
+    raamat_andmed_frame.mainloop()
 
+# Buttons for displaying tables and adding books
+Button(aken, text="Näita autoreid", command=lambda: table_autorid(conn)).pack(pady=10)
+Button(aken, text="Näita žanreid", command=lambda: table_zanr(conn)).pack(pady=10)
+Button(aken, text="Näita raamatuid", command=lambda: table_raamatud(conn)).pack(pady=10)
+Button(aken, text="Lisa raamat", command=add_raamat_aken).pack(pady=10)
 
-def add_autor(conn, autor_nimi, sünnikuupäev):
-    try:
-        cursor = conn.cursor()
-        cursor.execute("INSERT INTO Autorid (autor_nimi, sünnikuupäev) VALUES (?, ?)", (autor_nimi, sünnikuupäev))
-        conn.commit()
-        messagebox.showinfo("Autor on lisatud","Autor on lisatud")
-    except Error as e:
-        messagebox.showerror("Viga", f"Viga {e}")
+# Create tables and insert initial data if they don't exist
+create_tables(conn)
+insert_tables(conn)
 
-
-def delete_raamat_autor_nimi(conn, autor_nimi):
-    try:
-        cursor = conn.cursor()
-        cursor.execute("DELETE FROM Raamatud WHERE autor_id = (SELECT autor_id FROM Autorid WHERE autor_nimi = ?)", (autor_nimi,))
-        conn.commit()
-        messagebox.showinfo("Autor nimi raamatud on kustutatud","Autor nimi raamatud on kustutatud")
-    except Error as e:
-        messagebox.showerror("Viga", f"Viga {e}")
-
-def delete_raamat_autor_nimi_aken():
-    raamat_kustuta_autor_frame = tk.Toplevel(aken)
-    raamat_kustuta_autor_frame.title("Raamatute kustutamine autori nime järgi")
-    tk.Label(raamat_kustuta_autor_frame, text="Autor_nimi:").grid(row=1, column=0)
-    autor_andmed = execute_read_query(conn, "SELECT autor_nimi FROM Autorid")
-    autor_names = [row[0] for row in autor_andmed]
-    valitud_autor_nimi = tk.StringVar()
-    autor_nimi_combobox = ttk.Combobox(raamat_kustuta_autor_frame, textvariable=valitud_autor_nimi)
-    autor_nimi_combobox['values'] = autor_names
-    autor_nimi_combobox.grid(row=1, column=1)
-
-    def delete_raamat_autor_nimi_close():
-        delete_raamat_autor_nimi(conn, valitud_autor_nimi.get())
-        raamat_kustuta_autor_frame.destroy()
-
-    tk.Button(raamat_kustuta_autor_frame, text="Kustuta", command=delete_raamat_autor_nimi_close).grid(row=2, columnspan=2)
-
-def delete_raamat_pealkiri(conn, pealkiri):
-    try:
-        cursor = conn.cursor()
-        cursor.execute("DELETE FROM Raamatud WHERE pealkiri = ?", (pealkiri,))
-        conn.commit()
-        messagebox.showinfo("Pealkiri raamatud on kustutatud","Pealkiri raamatud on kustutatud")
-    except Error as e:
-        messagebox.showerror("Viga", f"Viga {e}")
-
-def delete_raamat_pealkiri_aken():
-    raamat_kustuta_pealkiri_frame = tk.Toplevel(aken)
-    raamat_kustuta_pealkiri_frame.title("Pealkirjaraamatute kustutamine ")
-    tk.Label(raamat_kustuta_pealkiri_frame, text="Pealkiri: ").grid(row=1, column=0)
-    pealkiri_entry = tk.Entry(raamat_kustuta_pealkiri_frame)
-    pealkiri_entry.grid(row=1, column=1)
-
-    def delete_raamat_pealkiri_close():
-        delete_raamat_pealkiri(conn, pealkiri_entry.get())
-        raamat_kustuta_pealkiri_frame.destroy()
-
-    tk.Button(raamat_kustuta_pealkiri_frame, text="Kustuta", command=delete_raamat_pealkiri_close).grid(row=2, columnspan=2)
-
-
-
-def add_autor_aken():
-    autor_andmed_frame = tk.Toplevel(aken)
-    autor_andmed_frame.title("Autorite lisamine") 
-    tk.Label(autor_andmed_frame, text="Autor nimi:").grid(row=1, column=0)
-    autor_nimi_entry = tk.Entry(autor_andmed_frame)
-    autor_nimi_entry.grid(row=1, column=1)
-    tk.Label(autor_andmed_frame, text="Sünnikuupäev: ").grid(row=2, column=0)
-    sünnikuupäev_entry = tk.Entry(autor_andmed_frame)
-    sünnikuupäev_entry.grid(row=2, column=1)
-
-    def add_autor_close():
-        autor_nimi = autor_nimi_entry.get()
-        sünnikuupäev = sünnikuupäev_entry.get()
-        add_autor(conn, autor_nimi, sünnikuupäev)
-        autor_andmed_frame.destroy()
-
-    tk.Button(autor_andmed_frame, text="Autor lisatud", command=add_autor_close).grid(row=3, columnspan=2)
-
-
-
-def add_zanr_aken():
-    zanr_andmed_frame = tk.Toplevel(aken)
-    zanr_andmed_frame.title("Zanrite lisamine")
-    tk.Label(zanr_andmed_frame, text="Zanri_nimi: ").grid(row=1, column=0)
-    zanri_nimi_entry = tk.Entry(zanr_andmed_frame)
-    zanri_nimi_entry.grid(row=1, column=1)
-
-    def add_zanr_close():
-        zanri_nimi = zanri_nimi_entry.get()
-        add_zanr(conn, zanri_nimi)
-        zanr_andmed_frame.destroy()
-
-    tk.Button(zanr_andmed_frame, text="Lisa zanr", command=add_zanr_close).grid(row=2, columnspan=2)
-
-def drop_tables(conn):
-    try:
-        cursor = conn.cursor()
-        cursor.execute("DROP TABLE IF EXISTS Autorid")
-        cursor.execute("DROP TABLE IF EXISTS Zanrid")
-        cursor.execute("DROP TABLE IF EXISTS Raamatud")
-        conn.commit()
-        messagebox.showinfo("Viga", "Tabelid on kustutatud!")
-    except Error as e:
-        messagebox.showerror("Viga", f"Tekkis väga: {e}")
-
-btn_drop_tables = tk.Button(aken,
-                            text="Tabeli kustutamine",
-                            bg="#ffc4d6",
-                            fg="#d1495b",
-                            font=("Forte 25"),
-                            width=30,
-                            command=lambda: drop_tables(conn))
-btn_drop_tables.pack()
-
-btn_create_tables = tk.Button(aken,
-                              text="Tabelite loomine",
-                              bg="#8eecf5",
-                              fg="#27187e",
-                              font=("Forte 25"),
-                              width=25,
-                              command=lambda: create_tables(conn))
-btn_create_tables.pack()
-
-btn_insert_data = tk.Button(aken,
-                            text="Tabeli täitmine",
-                            bg="#8eecf5",
-                            fg="#27187e",
-                            font=("Forte 25"),
-                            width=25,
-                            command=lambda: insert_tables(conn))
-btn_insert_data.pack()
-
-btn_autorid = tk.Button(aken,
-                        text="Autorite tabel",
-                        bg="#fbf8cc",
-                        fg="#ff7d00",
-                        font=("Forte 25"),
-                        width=22,
-                        command=lambda: table_autorid(conn))
-btn_autorid.pack()
-
-btn_zanrid = tk.Button(aken,
-                       text="Zanrite tabel",
-                       bg="#fbf8cc",
-                       fg="#ff7d00",
-                       font=("Forte 25"),
-                       width=22,
-                       command=lambda: table_zanr(conn))
-btn_zanrid.pack()
-
-btn_raamatud = tk.Button(aken,
-                         text="Raamatute tabel",
-                         bg="#fbf8cc",
-                         fg="#ff7d00",
-                         font=("Forte 25"),
-                         width=22,
-                         command=lambda: table_raamatud(conn))
-btn_raamatud.pack()
-
-btn_add_autor = tk.Button(aken,
-                          text="Autoride lisamine",
-                          bg="#b9fbc0",
-                          fg="#0a9396",
-                          font=("Forte 25"),
-                          width=20,
-                          command=add_autor_aken)
-btn_add_autor.pack()
-
-btn_add_zanr = tk.Button(aken,
-                         text="Žanrite lisamine",
-                         bg="#b9fbc0",
-                         fg="#0a9396",
-                         font=("Forte 25"),
-                         width=20,
-                         command=add_zanr_aken)
-btn_add_zanr.pack()
-
-btn_add_raamat = tk.Button(aken,
-                           text="Raamatute lisamine",
-                           bg="#b9fbc0",
-                           fg="#0a9396",
-                           font=("Forte 25"),
-                           width=20,
-                           command=add_raamat_aken)
-btn_add_raamat.pack()
-
-btn_delete_raamat_autor_nimi = tk.Button(aken,
-                                    text="Raamatute kustutamine autori nime järgi",
-                                    bg="#f7d1cd",
-                                    fg="#b56576",
-                                    font=("Forte 25"),
-                                    width=38,
-                                    command=delete_raamat_autor_nimi_aken)
-btn_delete_raamat_autor_nimi.pack()
-
-btn_delete_raamat_pealkiri = tk.Button(aken,
-                                       text="Pealkirjaraamatute kustutamine",
-                                       bg="#f7d1cd",
-                                       fg="#b56576",
-                                       font=("Forte 25"),
-                                       width=35,
-                                       command=delete_raamat_pealkiri_aken)
-btn_delete_raamat_pealkiri.pack()
-
-
-
+# Start Tkinter main loop
 aken.mainloop()
+
